@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Water Footprint</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f4bd47, #e6eaee);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            animation: fadeIn 1.5s ease-in;
+        }
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        #cropInfo {
+            margin-bottom: 20px;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 2s forwards;
+        }
+        #pieChart {
+            max-width: 300px;
+            max-height: 300px;
+            transform: scale(0);
+            animation: scaleUp 1s forwards;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 250px;
+            border: 1px solid #fff;
+            background-color: #fab246;
+            color: #fff;
+            font-size: 1rem;
+            border-radius: 5px;
+            outline: none;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: 0.3s ease-in-out;
+        }
+        input[type="text"]:focus {
+            background-color: #ffce65;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            background-color: #6cffb8;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        li {
+            padding: 10px;
+            cursor: pointer;
+            color: #fff;
+            text-align: center;
+        }
+        li:hover {
+            background-color: #ffc977;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h2>Search Crop to View Water Footprint</h2>
+    <input type="text" id="cropSearchBar" placeholder="Search for a crop...">
+    <ul id="searchResults"></ul>
+    <div id="cropInfo"></div>
+    <canvas id="pieChart" width="250" height="250"></canvas>
+
+    <script>
+        // Hardcoded data for crops
+        const cropData = [
+  {
+    "Crop": "Wheat",
+    "Water Footprint": 1827,
+    "Green Water": 1277,
+    "Blue Water": 207,
+    "Grey Water": 342
+  },
+  {
+    "Crop": "Wheat Flour",
+    "Water Footprint": 1849,
+    "Green Water": 1292,
+    "Blue Water": 210,
+    "Grey Water": 347
+  },
+  {
+    "Crop": "Wheat Bread",
+    "Water Footprint": 1608,
+    "Green Water": 1124,
+    "Blue Water": 183,
+    "Grey Water": 301
+  },
+  {
+    "Crop": "Dry Pasta",
+    "Water Footprint": 1849,
+    "Green Water": 1292,
+    "Blue Water": 210,
+    "Grey Water": 347
+  },
+  {
+    "Crop": "Wheat Pellets",
+    "Water Footprint": 2036,
+    "Green Water": 1423,
+    "Blue Water": 231,
+    "Grey Water": 382
+  },
+  {
+    "Crop": "Wheat Starch",
+    "Water Footprint": 1436,
+    "Green Water": 1004,
+    "Blue Water": 163,
+    "Grey Water": 269
+  },
+  {
+    "Crop": "Wheat Gluten",
+    "Water Footprint": 4189,
+    "Green Water": 2928,
+    "Blue Water": 476,
+    "Grey Water": 785
+  },
+  {
+    "Crop": "Rice, Paddy",
+    "Water Footprint": 1673,
+    "Green Water": 1146,
+    "Blue Water": 187,
+    "Grey Water": 341
+  },
+  {
+    "Crop": "Rice, Husked (Brown)",
+    "Water Footprint": 2172,
+    "Green Water": 1488,
+    "Blue Water": 242,
+    "Grey Water": 443
+  },
+  {
+    "Crop": "Rice, Broken",
+    "Water Footprint": 2497,
+    "Green Water": 1710,
+    "Blue Water": 278,
+    "Grey Water": 509
+  },
+  {
+    "Crop": "Rice Flour",
+    "Water Footprint": 2628,
+    "Green Water": 1800,
+    "Blue Water": 293,
+    "Grey Water": 535
+  },
+  {
+    "Crop": "Rice Groats and Meal",
+    "Water Footprint": 2230,
+    "Green Water": 1527,
+    "Blue Water": 249,
+    "Grey Water": 454
+  },
+  {
+    "Crop": "Barley",
+    "Water Footprint": 1423,
+    "Green Water": 1213,
+    "Blue Water": 131,
+    "Grey Water": 79
+  },
+  {
+    "Crop": "Barley, Rolled or Flaked Grains",
+    "Water Footprint": 1977,
+    "Green Water": 1685,
+    "Blue Water": 182,
+    "Grey Water": 110
+  },
+  {
+    "Crop": "Malt, Not Roasted",
+    "Water Footprint": 1950,
+    "Green Water": 1662,
+    "Blue Water": 180,
+    "Grey Water": 108
+  },
+  {
+    "Crop": "Malt, Roasted",
+    "Water Footprint": 2437,
+    "Green Water": 2078,
+    "Blue Water": 225,
+    "Grey Water": 135
+  },
+  {
+    "Crop": "Beer Made from Malt",
+    "Water Footprint": 298,
+    "Green Water": 254,
+    "Blue Water": 27,
+    "Grey Water": 16
+  },
+  {
+    "Crop": "Maize (Corn)",
+    "Water Footprint": 1222,
+    "Green Water": 947,
+    "Blue Water": 194,
+    "Grey Water": 81
+  },
+  {
+    "Crop": "Maize (Corn) Flour",
+    "Water Footprint": 1253,
+    "Green Water": 971,
+    "Blue Water": 199,
+    "Grey Water": 83
+  },
+  {
+    "Crop": "Maize (Corn) Groats and Meal",
+    "Water Footprint": 1081,
+    "Green Water": 837,
+    "Blue Water": 171,
+    "Grey Water": 72
+  },
+  {
+    "Crop": "Maize (Corn), Hulled, Pearled, Sliced or Kibbled",
+    "Water Footprint": 1314,
+    "Green Water": 1018,
+    "Blue Water": 209,
+    "Grey Water": 87
+  },
+  {
+    "Crop": "Maize (Corn) Starch",
+    "Water Footprint": 1671,
+    "Green Water": 1295,
+    "Blue Water": 265,
+    "Grey Water": 111
+  },
+  {
+    "Crop": "Maize (Corn) Oil",
+    "Water Footprint": 2575,
+    "Green Water": 1996,
+    "Blue Water": 409,
+    "Grey Water": 171
+  },
+  {
+    "Crop": "Rye",
+    "Water Footprint": 1544,
+    "Green Water": 1419,
+    "Blue Water": 99,
+    "Grey Water": 25
+  },
+  {
+    "Crop": "Rye Flour",
+    "Water Footprint": 1930,
+    "Green Water": 1774,
+    "Blue Water": 124,
+    "Grey Water": 32
+  },
+  {
+    "Crop": "Oats",
+    "Water Footprint": 1788,
+    "Green Water": 1479,
+    "Blue Water": 128,
+    "Grey Water": 181
+  },
+  {
+    "Crop": "Oat Groats and Meal",
+    "Water Footprint": 2536,
+    "Green Water": 2098,
+    "Blue Water": 182,
+    "Grey Water": 257
+  },
+  {
+    "Crop": "Oats, Rolled or Flaked Grains",
+    "Water Footprint": 2416,
+    "Green Water": 1998,
+    "Blue Water": 173,
+    "Grey Water": 245
+  },
+  {
+    "Crop": "Millet",
+    "Water Footprint": 4478,
+    "Green Water": 4306,
+    "Blue Water": 115,
+    "Grey Water": 57
+  },
+  {
+    "Crop": "Sorghum",
+    "Water Footprint": 3048,
+    "Green Water": 2857,
+    "Blue Water": 87,
+    "Grey Water": 103
+  },
+  {
+    "Crop": "Buckwheat",
+    "Water Footprint": 3142,
+    "Green Water": 2769,
+    "Blue Water": 229,
+    "Grey Water": 144
+  },
+  {
+    "Crop": "Potatoes",
+    "Water Footprint": 287,
+    "Green Water": 191,
+    "Blue Water": 63,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Tapioca of Potatoes",
+    "Water Footprint": 1436,
+    "Green Water": 955,
+    "Blue Water": 317,
+    "Grey Water": 165
+  },
+  {
+    "Crop": "Potato Flour and Meal",
+    "Water Footprint": 1436,
+    "Green Water": 955,
+    "Blue Water": 317,
+    "Grey Water": 165
+  },
+  {
+    "Crop": "Potato Flakes",
+    "Water Footprint": 1044,
+    "Green Water": 694,
+    "Blue Water": 230,
+    "Grey Water": 120
+  },
+  {
+    "Crop": "Potato Starch",
+    "Water Footprint": 1512,
+    "Green Water": 1005,
+    "Blue Water": 333,
+    "Grey Water": 173
+  },
+  {
+    "Crop": "Sweet Potatoes",
+    "Water Footprint": 383,
+    "Green Water": 324,
+    "Blue Water": 53,
+    "Grey Water": 5
+  },
+  {
+    "Crop": "Manioc (Cassava)",
+    "Water Footprint": 564,
+    "Green Water": 550,
+    "Blue Water": 13,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Tapioca of Cassava",
+    "Water Footprint": 2818,
+    "Green Water": 2750,
+    "Blue Water": 66,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Flour of Cassava",
+    "Water Footprint": 1878,
+    "Green Water": 1833,
+    "Blue Water": 44,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Dried Cassava",
+    "Water Footprint": 1610,
+    "Green Water": 1571,
+    "Blue Water": 38,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Manioc (Cassava) Starch",
+    "Water Footprint": 2254,
+    "Green Water": 2200,
+    "Blue Water": 53,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Taro (Cocoyam)",
+    "Water Footprint": 606,
+    "Green Water": 587,
+    "Blue Water": 15,
+    "Grey Water": 3
+  },
+  {
+    "Crop": "Yams",
+    "Water Footprint": 343,
+    "Green Water": 341,
+    "Blue Water": 1,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Sugarcane",
+    "Water Footprint": 210,
+    "Green Water": 139,
+    "Blue Water": 13,
+    "Grey Water": 57
+  },
+  {
+    "Crop": "Raw Sugar, Cane",
+    "Water Footprint": 1666,
+    "Green Water": 1107,
+    "Blue Water": 104,
+    "Grey Water": 455
+  },
+  {
+    "Crop": "Refined Sugar",
+    "Water Footprint": 1782,
+    "Green Water": 1184,
+    "Blue Water": 111,
+    "Grey Water": 487
+  },
+  {
+    "Crop": "Fructose, Chemically Pure",
+    "Water Footprint": 1782,
+    "Green Water": 1184,
+    "Blue Water": 111,
+    "Grey Water": 487
+  },
+  {
+    "Crop": "Cane Molasses",
+    "Water Footprint": 527,
+    "Green Water": 350,
+    "Blue Water": 33,
+    "Grey Water": 144
+  },
+  {
+    "Crop": "Sugarbeet",
+    "Water Footprint": 132,
+    "Green Water": 82,
+    "Blue Water": 25,
+    "Grey Water": 26
+  },
+  {
+    "Crop": "Raw Sugar, Beet",
+    "Water Footprint": 865,
+    "Green Water": 535,
+    "Blue Water": 162,
+    "Grey Water": 167
+  },
+  {
+    "Crop": "Beans, Dry",
+    "Water Footprint": 5053,
+    "Green Water": 3945,
+    "Blue Water": 983,
+    "Grey Water": 125
+  },
+  {
+    "Crop": "Broadbeans, Horsebeans, Dry",
+    "Water Footprint": 2018,
+    "Green Water": 1317,
+    "Blue Water": 496,
+    "Grey Water": 205
+  },
+  {
+    "Crop": "Peas, Dry",
+    "Water Footprint": 1979,
+    "Green Water": 1453,
+    "Blue Water": 493,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Chickpeas",
+    "Water Footprint": 4177,
+    "Green Water": 2972,
+    "Blue Water": 981,
+    "Grey Water": 224
+  },
+  {
+    "Crop": "Cowpeas, Dry",
+    "Water Footprint": 6906,
+    "Green Water": 6841,
+    "Blue Water": 55,
+    "Grey Water": 10
+  },
+  {
+    "Crop": "Pigeonpeas",
+    "Water Footprint": 5494,
+    "Green Water": 4739,
+    "Blue Water": 683,
+    "Grey Water": 72
+  },
+  {
+    "Crop": "Lentils",
+    "Water Footprint": 5874,
+    "Green Water": 4324,
+    "Blue Water": 1060,
+    "Grey Water": 489
+  },
+  {
+    "Crop": "Cashewnuts",
+    "Water Footprint": 14218,
+    "Green Water": 12853,
+    "Blue Water": 444,
+    "Grey Water": 921
+  },
+  {
+    "Crop": "Chestnuts",
+    "Water Footprint": 2750,
+    "Green Water": 2432,
+    "Blue Water": 144,
+    "Grey Water": 174
+  },
+  {
+    "Crop": "Almonds, with Shell",
+    "Water Footprint": 8047,
+    "Green Water": 4632,
+    "Blue Water": 1507,
+    "Grey Water": 1908
+  },
+  {
+    "Crop": "Almonds, Shelled or Peeled",
+    "Water Footprint": 16095,
+    "Green Water": 9264,
+    "Blue Water": 3015,
+    "Grey Water": 3816
+  },
+  {
+    "Crop": "Walnuts, with Shell",
+    "Water Footprint": 4918,
+    "Green Water": 2805,
+    "Blue Water": 814,
+    "Grey Water": 1299
+  },
+  {
+    "Crop": "Walnuts, Shelled or Peeled",
+    "Water Footprint": 9280,
+    "Green Water": 5293,
+    "Blue Water": 1536,
+    "Grey Water": 2451
+  },
+  {
+    "Crop": "Pistachios",
+    "Water Footprint": 11363,
+    "Green Water": 3095,
+    "Blue Water": 666,
+    "Grey Water": 7602
+  },
+  {
+    "Crop": "Kolanuts",
+    "Water Footprint": 23391,
+    "Green Water": 23345,
+    "Blue Water": 19,
+    "Grey Water": 26
+  },
+  {
+    "Crop": "Hazelnuts, with Shell",
+    "Water Footprint": 5258,
+    "Green Water": 3813,
+    "Blue Water": 354,
+    "Grey Water": 1090
+  },
+  {
+    "Crop": "Hazelnuts, Shelled or Peeled",
+    "Water Footprint": 10515,
+    "Green Water": 7627,
+    "Blue Water": 709,
+    "Grey Water": 2180
+  },
+  {
+    "Crop": "Arecanuts",
+    "Water Footprint": 11165,
+    "Green Water": 10621,
+    "Blue Water": 406,
+    "Grey Water": 139
+  },
+  {
+    "Crop": "Soyabeans",
+    "Water Footprint": 2145,
+    "Green Water": 2037,
+    "Blue Water": 37,
+    "Grey Water": 70
+  },
+  {
+    "Crop": "Soy Sauce",
+    "Water Footprint": 613,
+    "Green Water": 582,
+    "Blue Water": 11,
+    "Grey Water": 20
+  },
+  {
+    "Crop": "Soy Paste",
+    "Water Footprint": 572,
+    "Green Water": 543,
+    "Blue Water": 10,
+    "Grey Water": 19
+  },
+  {
+    "Crop": "Soy Curd",
+    "Water Footprint": 2523,
+    "Green Water": 2397,
+    "Blue Water": 44,
+    "Grey Water": 83
+  },
+  {
+    "Crop": "Soy Milk",
+    "Water Footprint": 3763,
+    "Green Water": 3574,
+    "Blue Water": 65,
+    "Grey Water": 123
+  },
+  {
+    "Crop": "Soybean Flour and Meals",
+    "Water Footprint": 2523,
+    "Green Water": 2397,
+    "Blue Water": 44,
+    "Grey Water": 83
+  },
+  {
+    "Crop": "Soybean Oil, Refined",
+    "Water Footprint": 4190,
+    "Green Water": 3980,
+    "Blue Water": 73,
+    "Grey Water": 137
+  },
+  {
+    "Crop": "Soybean Oil Cake",
+    "Water Footprint": 1779,
+    "Green Water": 1690,
+    "Blue Water": 31,
+    "Grey Water": 58
+  },
+  {
+    "Crop": "Groundnuts in Shell",
+    "Water Footprint": 2782,
+    "Green Water": 2469,
+    "Blue Water": 163,
+    "Grey Water": 150
+  },
+  {
+    "Crop": "Groundnuts Shelled",
+    "Water Footprint": 3974,
+    "Green Water": 3526,
+    "Blue Water": 234,
+    "Grey Water": 214
+  },
+  {
+    "Crop": "Groundnut Oil, Refined",
+    "Water Footprint": 7529,
+    "Green Water": 6681,
+    "Blue Water": 442,
+    "Grey Water": 405
+  },
+  {
+    "Crop": "Groundnut Oil Cake",
+    "Water Footprint": 1484,
+    "Green Water": 1317,
+    "Blue Water": 87,
+    "Grey Water": 80
+  },
+  {
+    "Crop": "Coconuts",
+    "Water Footprint": 2687,
+    "Green Water": 2669,
+    "Blue Water": 16,
+    "Grey Water": 2
+  },
+  {
+    "Crop": "Copra",
+    "Water Footprint": 2093,
+    "Green Water": 2079,
+    "Blue Water": 12,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Husked)",
+    "Water Footprint": 1256,
+    "Green Water": 1247,
+    "Blue Water": 7,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Copra) Oil, Refined",
+    "Water Footprint": 4490,
+    "Green Water": 4461,
+    "Blue Water": 27,
+    "Grey Water": 3
+  },
+  {
+    "Crop": "Coconut/Copra Oil Cake",
+    "Water Footprint": 834,
+    "Green Water": 829,
+    "Blue Water": 5,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Coir) Fibre, Processed",
+    "Water Footprint": 2449,
+    "Green Water": 2433,
+    "Blue Water": 15,
+    "Grey Water": 2
+  },
+  {
+    "Crop": "Oil Palm",
+    "Water Footprint": 1098,
+    "Green Water": 1057,
+    "Blue Water": 40,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Palm Nuts and Kernels",
+    "Water Footprint": 2868,
+    "Green Water": 2762,
+    "Blue Water": 105,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Oil, Refined",
+    "Water Footprint": 4971,
+    "Green Water": 4787,
+    "Blue Water": 182,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Kernel/Babassu Oil, Refined",
+    "Water Footprint": 5401,
+    "Green Water": 5202,
+    "Blue Water": 198,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Nut/Kernel Oil Cake",
+    "Water Footprint": 833,
+    "Green Water": 802,
+    "Blue Water": 31,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Olives",
+    "Water Footprint": 3015,
+    "Green Water": 2470,
+    "Blue Water": 45,
+    "Grey Water": 499
+  },
+  {
+    "Crop": "Olive Oil, Virgin",
+    "Water Footprint": 14431,
+    "Green Water": 11826,
+    "Blue Water": 217,
+    "Grey Water": 2388
+  },
+  {
+    "Crop": "Olive Oil, Refined",
+    "Water Footprint": 14726,
+    "Green Water": 12067,
+    "Blue Water": 221,
+    "Grey Water": 2437
+  },
+  {
+    "Crop": "Castor Oil Seeds",
+    "Water Footprint": 9896,
+    "Green Water": 8423,
+    "Blue Water": 298,
+    "Grey Water": 1175
+  },
+  {
+    "Crop": "Castor Oil",
+    "Water Footprint": 24740,
+    "Green Water": 21058,
+    "Blue Water": 744,
+    "Grey Water": 2938
+  },
+  {
+    "Crop": "Sunflower Seeds",
+    "Water Footprint": 3366,
+    "Green Water": 3017,
+    "Blue Water": 201,
+    "Grey Water": 148
+  },
+  {
+    "Crop": "Sunflower Seed Oil, Refined",
+    "Water Footprint": 6792,
+    "Green Water": 6088,
+    "Blue Water": 405,
+    "Grey Water": 299
+  },
+  {
+    "Crop": "Sunflower Seed Oil Cake",
+    "Water Footprint": 1356,
+    "Green Water": 1215,
+    "Blue Water": 81,
+    "Grey Water": 60
+  },
+  {
+    "Crop": "Rapeseed",
+    "Water Footprint": 2271,
+    "Green Water": 1703,
+    "Blue Water": 336,
+    "Grey Water": 231
+  },
+  {
+    "Crop": "Rape Oil, Refined",
+    "Water Footprint": 4301,
+    "Green Water": 3226,
+    "Blue Water": 636,
+    "Grey Water": 438
+  },
+  {
+    "Crop": "Rapeseed Oil Cake",
+    "Water Footprint": 1115,
+    "Green Water": 837,
+    "Blue Water": 165,
+    "Grey Water": 114
+  },
+  {
+    "Crop": "Safflower Seeds",
+    "Water Footprint": 7221,
+    "Green Water": 6000,
+    "Blue Water": 283,
+    "Grey Water": 938
+  },
+  {
+    "Crop": "Sesame Seed",
+    "Water Footprint": 9371,
+    "Green Water": 8460,
+    "Blue Water": 403,
+    "Grey Water": 509
+  },
+  {
+    "Crop": "Sesame Oil",
+    "Water Footprint": 21793,
+    "Green Water": 19674,
+    "Blue Water": 936,
+    "Grey Water": 1183
+  },
+  {
+    "Crop": "Mustard Seeds",
+    "Water Footprint": 2809,
+    "Green Water": 2463,
+    "Blue Water": 345,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Poppy Seeds",
+    "Water Footprint": 2188,
+    "Green Water": 1723,
+    "Blue Water": 464,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Melon Seed",
+    "Water Footprint": 5184,
+    "Green Water": 5087,
+    "Blue Water": 41,
+    "Grey Water": 56
+  },
+  {
+    "Crop": "Seed Cotton",
+    "Water Footprint": 4029,
+    "Green Water": 2282,
+    "Blue Water": 440,
+    "Grey Water": 1306
+  },
+  {
+    "Crop": "Cotton Seeds",
+    "Water Footprint": 1332,
+    "Green Water": 755,
+    "Blue Water": 146,
+    "Grey Water": 432
+  },
+  {
+    "Crop": "Cotton Lint",
+    "Water Footprint": 9113,
+    "Green Water": 5163,
+    "Blue Water": 996,
+    "Grey Water": 2955
+  },
+  {
+    "Crop": "Cotton Linters",
+    "Water Footprint": 2602,
+    "Green Water": 1474,
+    "Blue Water": 284,
+    "Grey Water": 844
+  },
+  {
+    "Crop": "Cotton Seed Oil, Refined",
+    "Water Footprint": 3957,
+    "Green Water": 2242,
+    "Blue Water": 432,
+    "Grey Water": 1283
+  },
+  {
+    "Crop": "Cotton Seed Oil Cake",
+    "Water Footprint": 860,
+    "Green Water": 487,
+    "Blue Water": 94,
+    "Grey Water": 279
+  },
+  {
+    "Crop": "Cotton, Not Carded or Combed",
+    "Water Footprint": 9113,
+    "Green Water": 5163,
+    "Blue Water": 996,
+    "Grey Water": 2955
+  },
+  {
+    "Crop": "Cotton Yarn Waste (including Thread Waste)",
+    "Water Footprint": 1677,
+    "Green Water": 950,
+    "Blue Water": 183,
+    "Grey Water": 544
+  },
+  {
+    "Crop": "Garneted Stock of Cotton",
+    "Water Footprint": 2517,
+    "Green Water": 1426,
+    "Blue Water": 275,
+    "Grey Water": 816
+  },
+  {
+    "Crop": "Cotton, Carded or Combed",
+    "Water Footprint": 9460,
+    "Green Water": 5359,
+    "Blue Water": 1034,
+    "Grey Water": 3067
+  },
+  {
+    "Crop": "Cotton Fabric, Finished Textile",
+    "Water Footprint": 9982,
+    "Green Water": 5384,
+    "Blue Water": 1344,
+    "Grey Water": 3253
+  },
+  {
+    "Crop": "Linseed",
+    "Water Footprint": 5168,
+    "Green Water": 4730,
+    "Blue Water": 170,
+    "Grey Water": 268
+  },
+  {
+    "Crop": "Linseed Oil, Refined",
+    "Water Footprint": 9415,
+    "Green Water": 8618,
+    "Blue Water": 310,
+    "Grey Water": 488
+  },
+  {
+    "Crop": "Linseed Oil Cake",
+    "Water Footprint": 3077,
+    "Green Water": 2816,
+    "Blue Water": 101,
+    "Grey Water": 160
+  },
+  {
+    "Crop": "Hemp Seed",
+    "Water Footprint": 3685,
+    "Green Water": 3257,
+    "Blue Water": 417,
+    "Grey Water": 12
+  },
+  {
+    "Crop": "Cabbages and Other Brassicas",
+    "Water Footprint": 280,
+    "Green Water": 181,
+    "Blue Water": 73,
+    "Grey Water": 26
+  },
+  {
+    "Crop": "Artichokes",
+    "Water Footprint": 818,
+    "Green Water": 478,
+    "Blue Water": 98,
+    "Grey Water": 242
+  },
+  {
+    "Crop": "Asparagus",
+    "Water Footprint": 2150,
+    "Green Water": 1524,
+    "Blue Water": 507,
+    "Grey Water": 119
+  },
+  {
+    "Crop": "Lettuce",
+    "Water Footprint": 237,
+    "Green Water": 133,
+    "Blue Water": 77,
+    "Grey Water": 28
+  },
+  {
+    "Crop": "Spinach",
+    "Water Footprint": 292,
+    "Green Water": 118,
+    "Blue Water": 160,
+    "Grey Water": 14
+  },
+  {
+    "Crop": "Tomatoes",
+    "Water Footprint": 214,
+    "Green Water": 108,
+    "Blue Water": 43,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "Tomato Juice, Unfermented & Not Spirited",
+    "Water Footprint": 267,
+    "Green Water": 135,
+    "Blue Water": 53,
+    "Grey Water": 79
+  },
+  {
+    "Crop": "Tomato Juice, Concentrated",
+    "Water Footprint": 1069,
+    "Green Water": 539,
+    "Blue Water": 213,
+    "Grey Water": 316
+  },
+  {
+    "Crop": "Tomato Paste",
+    "Water Footprint": 855,
+    "Green Water": 431,
+    "Blue Water": 171,
+    "Grey Water": 253
+  },
+  {
+    "Crop": "Tomato Ketchup",
+    "Water Footprint": 534,
+    "Green Water": 270,
+    "Blue Water": 107,
+    "Grey Water": 158
+  },
+  {
+    "Crop": "Tomato Puree",
+    "Water Footprint": 713,
+    "Green Water": 360,
+    "Blue Water": 142,
+    "Grey Water": 211
+  },
+  {
+    "Crop": "Peeled Tomatoes",
+    "Water Footprint": 267,
+    "Green Water": 135,
+    "Blue Water": 53,
+    "Grey Water": 79
+  },
+  {
+    "Crop": "Tomato, Dried",
+    "Water Footprint": 4276,
+    "Green Water": 2157,
+    "Blue Water": 853,
+    "Grey Water": 1265
+  },
+  {
+    "Crop": "Cauliflowers and Broccoli",
+    "Water Footprint": 285,
+    "Green Water": 189,
+    "Blue Water": 75,
+    "Grey Water": 21
+  },
+  {
+    "Crop": "Brussels Sprouts",
+    "Water Footprint": 285,
+    "Green Water": 189,
+    "Blue Water": 75,
+    "Grey Water": 21
+  },
+  {
+    "Crop": "Pumpkins, Squash and Gourds",
+    "Water Footprint": 336,
+    "Green Water": 228,
+    "Blue Water": 84,
+    "Grey Water": 24
+  },
+  {
+    "Crop": "Cucumbers and Gherkins",
+    "Water Footprint": 353,
+    "Green Water": 206,
+    "Blue Water": 105,
+    "Grey Water": 42
+  },
+  {
+    "Crop": "Eggplants (Aubergines)",
+    "Water Footprint": 362,
+    "Green Water": 234,
+    "Blue Water": 95,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Chillies and Peppers, Green",
+    "Water Footprint": 379,
+    "Green Water": 240,
+    "Blue Water": 97,
+    "Grey Water": 42
+  },
+  {
+    "Crop": "Onions (incl. Shallots), Green",
+    "Water Footprint": 272,
+    "Green Water": 176,
+    "Blue Water": 51,
+    "Grey Water": 44
+  },
+  {
+    "Crop": "Onions, Dry",
+    "Water Footprint": 345,
+    "Green Water": 192,
+    "Blue Water": 65,
+    "Grey Water": 88
+  },
+  {
+    "Crop": "Garlic",
+    "Water Footprint": 589,
+    "Green Water": 337,
+    "Blue Water": 170,
+    "Grey Water": 81
+  },
+  {
+    "Crop": "Garlic Powder",
+    "Water Footprint": 2265,
+    "Green Water": 1297,
+    "Blue Water": 655,
+    "Grey Water": 313
+  },
+  {
+    "Crop": "Beans, Green",
+    "Water Footprint": 561,
+    "Green Water": 320,
+    "Blue Water": 188,
+    "Grey Water": 54
+  },
+  {
+    "Crop": "Peas, Green",
+    "Water Footprint": 595,
+    "Green Water": 382,
+    "Blue Water": 150,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "String Beans",
+    "Water Footprint": 547,
+    "Green Water": 301,
+    "Blue Water": 143,
+    "Grey Water": 104
+  },
+  {
+    "Crop": "Carrots and Turnips",
+    "Water Footprint": 195,
+    "Green Water": 106,
+    "Blue Water": 61,
+    "Grey Water": 28
+  },
+  {
+    "Crop": "Okra",
+    "Water Footprint": 576,
+    "Green Water": 474,
+    "Blue Water": 65,
+    "Grey Water": 36
+  },
+  {
+    "Crop": "Maize, Green",
+    "Water Footprint": 700,
+    "Green Water": 455,
+    "Blue Water": 88,
+    "Grey Water": 157
+  },
+  {
+    "Crop": "Carobs",
+    "Water Footprint": 5594,
+    "Green Water": 4557,
+    "Blue Water": 703,
+    "Grey Water": 334
+  },
+  {
+    "Crop": "Bananas",
+    "Water Footprint": 790,
+    "Green Water": 660,
+    "Blue Water": 33,
+    "Grey Water": 97
+  },
+  {
+    "Crop": "Plantains",
+    "Water Footprint": 1602,
+    "Green Water": 1570,
+    "Blue Water": 6,
+    "Grey Water": 27
+  },
+  {
+    "Crop": "Oranges",
+    "Water Footprint": 560,
+    "Green Water": 401,
+    "Blue Water": 49,
+    "Grey Water": 110
+  },
+  {
+    "Crop": "Orange Juice",
+    "Water Footprint": 1018,
+    "Green Water": 729,
+    "Blue Water": 90,
+    "Grey Water": 199
+  },
+  {
+    "Crop": "Tangerines, Mandarins, Clement",
+    "Water Footprint": 748,
+    "Green Water": 479,
+    "Blue Water": 152,
+    "Grey Water": 118
+  },
+  {
+    "Crop": "Lemons and Limes",
+    "Water Footprint": 642,
+    "Green Water": 432,
+    "Blue Water": 58,
+    "Grey Water": 152
+  },
+  {
+    "Crop": "Grapefruit",
+    "Water Footprint": 506,
+    "Green Water": 367,
+    "Blue Water": 54,
+    "Grey Water": 85
+  },
+  {
+    "Crop": "Apples, Fresh",
+    "Water Footprint": 822,
+    "Green Water": 561,
+    "Blue Water": 127,
+    "Grey Water": 133
+  },
+  {
+    "Crop": "Apples, Dried",
+    "Water Footprint": 6847,
+    "Green Water": 4678,
+    "Blue Water": 1058,
+    "Grey Water": 1111
+  },
+  {
+    "Crop": "Apple Juice, Unfermented & Not Spirited",
+    "Water Footprint": 1141,
+    "Green Water": 780,
+    "Blue Water": 176,
+    "Grey Water": 185
+  },
+  {
+    "Crop": "Pears",
+    "Water Footprint": 922,
+    "Green Water": 645,
+    "Blue Water": 183,
+    "Grey Water": 94
+  },
+  {
+    "Crop": "Apricots",
+    "Water Footprint": 1287,
+    "Green Water": 694,
+    "Blue Water": 92,
+    "Grey Water": 502
+  },
+  {
+    "Crop": "Sour Cherries",
+    "Water Footprint": 1411,
+    "Green Water": 1098,
+    "Blue Water": 99,
+    "Grey Water": 213
+  },
+  {
+    "Crop": "Cherries",
+    "Water Footprint": 1604,
+    "Green Water": 961,
+    "Blue Water": 112,
+    "Grey Water": 531
+  },
+  {
+    "Crop": "Peaches and Nectarines",
+    "Water Footprint": 910,
+    "Green Water": 583,
+    "Blue Water": 139,
+    "Grey Water": 188
+  },
+  {
+    "Crop": "Plums and Sloes",
+    "Water Footprint": 2180,
+    "Green Water": 1570,
+    "Blue Water": 422,
+    "Grey Water": 188
+  },
+  {
+    "Crop": "Strawberries",
+    "Water Footprint": 347,
+    "Green Water": 201,
+    "Blue Water": 37,
+    "Grey Water": 109
+  },
+  {
+    "Crop": "Raspberries",
+    "Water Footprint": 413,
+    "Green Water": 293,
+    "Blue Water": 67,
+    "Grey Water": 53
+  },
+  {
+    "Crop": "Gooseberries",
+    "Water Footprint": 526,
+    "Green Water": 487,
+    "Blue Water": 31,
+    "Grey Water": 8
+  },
+  {
+    "Crop": "Currants",
+    "Water Footprint": 499,
+    "Green Water": 457,
+    "Blue Water": 23,
+    "Grey Water": 19
+  },
+  {
+    "Crop": "Blueberries",
+    "Water Footprint": 845,
+    "Green Water": 341,
+    "Blue Water": 170,
+    "Grey Water": 334
+  },
+  {
+    "Crop": "Cranberries",
+    "Water Footprint": 276,
+    "Green Water": 91,
+    "Blue Water": 77,
+    "Grey Water": 108
+  },
+  {
+    "Crop": "Grapes",
+    "Water Footprint": 608,
+    "Green Water": 425,
+    "Blue Water": 87,
+    "Grey Water": 97
+  },
+  {
+    "Crop": "Grapes, Dried",
+    "Water Footprint": 2433,
+    "Green Water": 1700,
+    "Blue Water": 347,
+    "Grey Water": 386
+  },
+  {
+    "Crop": "Grapefruit Juice",
+    "Water Footprint": 675,
+    "Green Water": 490,
+    "Blue Water": 71,
+    "Grey Water": 114
+  },
+  {
+    "Crop": "Grape Wines, Sparkling",
+    "Water Footprint": 869,
+    "Green Water": 607,
+    "Blue Water": 124,
+    "Grey Water": 138
+  },
+  {
+    "Crop": "Watermelons",
+    "Water Footprint": 235,
+    "Green Water": 147,
+    "Blue Water": 63,
+    "Grey Water": 25
+  },
+  {
+    "Crop": "Figs",
+    "Water Footprint": 3350,
+    "Green Water": 1527,
+    "Blue Water": 228,
+    "Grey Water": 1595
+  },
+  {
+    "Crop": "Mangoes, Mangosteens, Guavas",
+    "Water Footprint": 1800,
+    "Green Water": 1314,
+    "Blue Water": 124,
+    "Grey Water": 362
+  },
+  {
+    "Crop": "Avocados",
+    "Water Footprint": 1981,
+    "Green Water": 849,
+    "Blue Water": 849,
+    "Grey Water": 283
+  },
+  {
+    "Crop": "Pineapples",
+    "Water Footprint": 255,
+    "Green Water": 215,
+    "Blue Water": 31,
+    "Grey Water": 9
+  },
+  {
+    "Crop": "Pineapple Juice",
+    "Water Footprint": 1273,
+    "Green Water": 1075,
+    "Blue Water": 153,
+    "Grey Water": 45
+  },
+  {
+    "Crop": "Dates",
+    "Water Footprint": 2277,
+    "Green Water": 930,
+    "Blue Water": 98,
+    "Grey Water": 1250
+  },
+  {
+    "Crop": "Cashew Apple",
+    "Water Footprint": 3793,
+    "Green Water": 3638,
+    "Blue Water": 121,
+    "Grey Water": 34
+  },
+  {
+    "Crop": "Kiwifruit",
+    "Water Footprint": 514,
+    "Green Water": 307,
+    "Blue Water": 38,
+    "Grey Water": 168
+  },
+  {
+    "Crop": "Papayas",
+    "Water Footprint": 460,
+    "Green Water": 399,
+    "Blue Water": 21,
+    "Grey Water": 40
+  },
+  {
+    "Crop": "Coffee, Green",
+    "Water Footprint": 15897,
+    "Green Water": 15249,
+    "Blue Water": 532,
+    "Grey Water": 116
+  },
+  {
+    "Crop": "Coffee, Roasted",
+    "Water Footprint": 18925,
+    "Green Water": 18153,
+    "Blue Water": 633,
+    "Grey Water": 139
+  },
+  {
+    "Crop": "Cocoa Beans",
+    "Water Footprint": 19928,
+    "Green Water": 19745,
+    "Blue Water": 179,
+    "Grey Water": 4
+  },
+  {
+    "Crop": "Cocoa Paste",
+    "Water Footprint": 24238,
+    "Green Water": 24015,
+    "Blue Water": 218,
+    "Grey Water": 5
+  },
+  {
+    "Crop": "Cocoa Butter, Fat and Oil",
+    "Water Footprint": 33938,
+    "Green Water": 33626,
+    "Blue Water": 305,
+    "Grey Water": 7
+  },
+  {
+    "Crop": "Cocoa Powder",
+    "Water Footprint": 15636,
+    "Green Water": 15492,
+    "Blue Water": 141,
+    "Grey Water": 3
+  },
+  {
+    "Crop": "Chocolate",
+    "Water Footprint": 17196,
+    "Green Water": 16805,
+    "Blue Water": 193,
+    "Grey Water": 198
+  },
+  {
+    "Crop": "Green and Black Tea",
+    "Water Footprint": 8856,
+    "Green Water": 7232,
+    "Blue Water": 726,
+    "Grey Water": 898
+  },
+  {
+    "Crop": "Hop Cones",
+    "Water Footprint": 4065,
+    "Green Water": 2382,
+    "Blue Water": 1414,
+    "Grey Water": 269
+  },
+  {
+    "Crop": "Hop Extract",
+    "Water Footprint": 16259,
+    "Green Water": 9528,
+    "Blue Water": 5654,
+    "Grey Water": 1077
+  },
+  {
+    "Crop": "Pepper of the Genus Piper",
+    "Water Footprint": 7611,
+    "Green Water": 6540,
+    "Blue Water": 604,
+    "Grey Water": 467
+  },
+  {
+    "Crop": "Chillies and Peppers, Dry",
+    "Water Footprint": 7365,
+    "Green Water": 5869,
+    "Blue Water": 371,
+    "Grey Water": 1125
+  },
+  {
+    "Crop": "Vanilla Beans",
+    "Water Footprint": 126505,
+    "Green Water": 86392,
+    "Blue Water": 1065,
+    "Grey Water": 39048
+  },
+  {
+    "Crop": "Cinnamon (Canella)",
+    "Water Footprint": 15526,
+    "Green Water": 14853,
+    "Blue Water": 632,
+    "Grey Water": 41
+  },
+  {
+    "Crop": "Cloves",
+    "Water Footprint": 61205,
+    "Green Water": 59834,
+    "Blue Water": 1341,
+    "Grey Water": 30
+  },
+  {
+    "Crop": "Nutmeg, Mace and Cardamoms",
+    "Water Footprint": 34319,
+    "Green Water": 30683,
+    "Blue Water": 1014,
+    "Grey Water": 2623
+  },
+  {
+    "Crop": "Anise, Badian, Fennel, Coriander",
+    "Water Footprint": 8280,
+    "Green Water": 5369,
+    "Blue Water": 1046,
+    "Grey Water": 1865
+  },
+  {
+    "Crop": "Coriander Seeds",
+    "Water Footprint": 8280,
+    "Green Water": 5369,
+    "Blue Water": 1046,
+    "Grey Water": 1865
+  },
+  {
+    "Crop": "Ginger",
+    "Water Footprint": 1657,
+    "Green Water": 1525,
+    "Blue Water": 92,
+    "Grey Water": 40
+  },
+  {
+    "Crop": "Peppermint",
+    "Water Footprint": 288,
+    "Green Water": 206,
+    "Blue Water": 19,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "Flax Fibre and Tow",
+    "Water Footprint": 3481,
+    "Green Water": 2637,
+    "Blue Water": 401,
+    "Grey Water": 443
+  },
+  {
+    "Crop": "Flax Fibre, Otherwise Processed but Not Spun",
+    "Water Footprint": 3783,
+    "Green Water": 2866,
+    "Blue Water": 436,
+    "Grey Water": 481
+  },
+  {
+    "Crop": "Flax Tow and Waste",
+    "Water Footprint": 767,
+    "Green Water": 581,
+    "Blue Water": 88,
+    "Grey Water": 98
+  },
+  {
+    "Crop": "Hemp Fibre and Tow",
+    "Water Footprint": 2447,
+    "Green Water": 1824,
+    "Blue Water": 624,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "True Hemp Fibre Processed but Not Spun",
+    "Water Footprint": 2719,
+    "Green Water": 2026,
+    "Blue Water": 693,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Jute and Other Textile Bast Fibres",
+    "Water Footprint": 2605,
+    "Green Water": 2356,
+    "Blue Water": 217,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Ramie",
+    "Water Footprint": 4507,
+    "Green Water": 3712,
+    "Blue Water": 595,
+    "Grey Water": 201
+  },
+  {
+    "Crop": "Sisal",
+    "Water Footprint": 7041,
+    "Green Water": 6112,
+    "Blue Water": 222,
+    "Grey Water": 708
+  },
+  {
+    "Crop": "Sisal Textile Fibres, Processed but Not Spun",
+    "Water Footprint": 7824,
+    "Green Water": 6791,
+    "Blue Water": 246,
+    "Grey Water": 787
+  },
+  {
+    "Crop": "Agave Fibres",
+    "Water Footprint": 6549,
+    "Green Water": 6434,
+    "Blue Water": 106,
+    "Grey Water": 9
+  },
+  {
+    "Crop": "Manila Fibre (Abaca)",
+    "Water Footprint": 20388,
+    "Green Water": 19376,
+    "Blue Water": 766,
+    "Grey Water": 246
+  },
+  {
+    "Crop": "Abaca Fibre, Processed but Not Spun",
+    "Water Footprint": 22654,
+    "Green Water": 21529,
+    "Blue Water": 851,
+    "Grey Water": 273
+  },
+  {
+    "Crop": "Tobacco, Unmanufactured",
+    "Water Footprint": 2925,
+    "Green Water": 2021,
+    "Blue Water": 700,
+    "Grey Water": 205
+  },
+  {
+    "Crop": "Natural Rubber",
+    "Water Footprint": 13748,
+    "Green Water": 12964,
+    "Blue Water": 422,
+    "Grey Water": 361
+  },
+  {
+    "Crop": "Coconuts",
+    "Water Footprint": 2687,
+    "Green Water": 2669,
+    "Blue Water": 16,
+    "Grey Water": 2
+  },
+  {
+    "Crop": "Copra",
+    "Water Footprint": 2093,
+    "Green Water": 2079,
+    "Blue Water": 12,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Husked)",
+    "Water Footprint": 1256,
+    "Green Water": 1247,
+    "Blue Water": 7,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Copra) Oil, Refined",
+    "Water Footprint": 4490,
+    "Green Water": 4461,
+    "Blue Water": 27,
+    "Grey Water": 3
+  },
+  {
+    "Crop": "Coconut/ Copra Oil Cake",
+    "Water Footprint": 834,
+    "Green Water": 829,
+    "Blue Water": 5,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Coconut (Coir) Fibre, Processed",
+    "Water Footprint": 2449,
+    "Green Water": 2433,
+    "Blue Water": 15,
+    "Grey Water": 2
+  },
+  {
+    "Crop": "Oil Palm",
+    "Water Footprint": 1098,
+    "Green Water": 1057,
+    "Blue Water": 40,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Palm Nuts and Kernels",
+    "Water Footprint": 2868,
+    "Green Water": 2762,
+    "Blue Water": 105,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Oil, Refined",
+    "Water Footprint": 4971,
+    "Green Water": 4787,
+    "Blue Water": 182,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Kernel/Babassu Oil, Refined",
+    "Water Footprint": 5401,
+    "Green Water": 5202,
+    "Blue Water": 198,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Palm Nut/Kernel Oil Cake",
+    "Water Footprint": 833,
+    "Green Water": 802,
+    "Blue Water": 31,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Olives",
+    "Water Footprint": 3015,
+    "Green Water": 2470,
+    "Blue Water": 45,
+    "Grey Water": 499
+  },
+  {
+    "Crop": "Olive Oil, Virgin",
+    "Water Footprint": 14431,
+    "Green Water": 11826,
+    "Blue Water": 217,
+    "Grey Water": 2388
+  },
+  {
+    "Crop": "Olive Oil, Refined",
+    "Water Footprint": 14726,
+    "Green Water": 12067,
+    "Blue Water": 221,
+    "Grey Water": 2437
+  },
+  {
+    "Crop": "Castor Oil Seeds",
+    "Water Footprint": 9896,
+    "Green Water": 8423,
+    "Blue Water": 298,
+    "Grey Water": 1175
+  },
+  {
+    "Crop": "Castor Oil",
+    "Water Footprint": 24740,
+    "Green Water": 21058,
+    "Blue Water": 744,
+    "Grey Water": 2938
+  },
+  {
+    "Crop": "Sunflower Seeds",
+    "Water Footprint": 3366,
+    "Green Water": 3017,
+    "Blue Water": 201,
+    "Grey Water": 148
+  },
+  {
+    "Crop": "Sunflower Seed Oil, Refined",
+    "Water Footprint": 6792,
+    "Green Water": 6088,
+    "Blue Water": 405,
+    "Grey Water": 299
+  },
+  {
+    "Crop": "Sunflower Seed Oil Cake",
+    "Water Footprint": 1356,
+    "Green Water": 1215,
+    "Blue Water": 81,
+    "Grey Water": 60
+  },
+  {
+    "Crop": "Rapeseed",
+    "Water Footprint": 2271,
+    "Green Water": 1703,
+    "Blue Water": 336,
+    "Grey Water": 231
+  },
+  {
+    "Crop": "Rape Oil, Refined",
+    "Water Footprint": 4301,
+    "Green Water": 3226,
+    "Blue Water": 636,
+    "Grey Water": 438
+  },
+  {
+    "Crop": "Rapeseed Oil Cake",
+    "Water Footprint": 1115,
+    "Green Water": 837,
+    "Blue Water": 165,
+    "Grey Water": 114
+  },
+  {
+    "Crop": "Safflower Seeds",
+    "Water Footprint": 7221,
+    "Green Water": 6000,
+    "Blue Water": 283,
+    "Grey Water": 938
+  },
+  {
+    "Crop": "Sesame Seed",
+    "Water Footprint": 9371,
+    "Green Water": 8460,
+    "Blue Water": 403,
+    "Grey Water": 509
+  },
+  {
+    "Crop": "Sesame Oil",
+    "Water Footprint": 21793,
+    "Green Water": 19674,
+    "Blue Water": 936,
+    "Grey Water": 1183
+  },
+  {
+    "Crop": "Mustard Seeds",
+    "Water Footprint": 2809,
+    "Green Water": 2463,
+    "Blue Water": 345,
+    "Grey Water": 1
+  },
+  {
+    "Crop": "Poppy Seeds",
+    "Water Footprint": 2188,
+    "Green Water": 1723,
+    "Blue Water": 464,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Melon Seed",
+    "Water Footprint": 5184,
+    "Green Water": 5087,
+    "Blue Water": 41,
+    "Grey Water": 56
+  },
+  {
+    "Crop": "Seed Cotton",
+    "Water Footprint": 4029,
+    "Green Water": 2282,
+    "Blue Water": 440,
+    "Grey Water": 1306
+  },
+  {
+    "Crop": "Cotton Seeds",
+    "Water Footprint": 1332,
+    "Green Water": 755,
+    "Blue Water": 146,
+    "Grey Water": 432
+  },
+  {
+    "Crop": "Cotton Lint",
+    "Water Footprint": 9113,
+    "Green Water": 5163,
+    "Blue Water": 996,
+    "Grey Water": 2955
+  },
+  {
+    "Crop": "Cotton Linters",
+    "Water Footprint": 2602,
+    "Green Water": 1474,
+    "Blue Water": 284,
+    "Grey Water": 844
+  },
+  {
+    "Crop": "Cotton Seed Oil, Refined",
+    "Water Footprint": 3957,
+    "Green Water": 2242,
+    "Blue Water": 432,
+    "Grey Water": 1283
+  },
+  {
+    "Crop": "Cotton Seed Oil Cake",
+    "Water Footprint": 860,
+    "Green Water": 487,
+    "Blue Water": 94,
+    "Grey Water": 279
+  },
+  {
+    "Crop": "Cotton, Not Carded or Combed",
+    "Water Footprint": 9113,
+    "Green Water": 5163,
+    "Blue Water": 996,
+    "Grey Water": 2955
+  },
+  {
+    "Crop": "Cotton Yarn Waste (Including Thread Waste)",
+    "Water Footprint": 1677,
+    "Green Water": 950,
+    "Blue Water": 183,
+    "Grey Water": 544
+  },
+  {
+    "Crop": "Garneted Stock of Cotton",
+    "Water Footprint": 2517,
+    "Green Water": 1426,
+    "Blue Water": 275,
+    "Grey Water": 816
+  },
+  {
+    "Crop": "Cotton, Carded or Combed",
+    "Water Footprint": 9460,
+    "Green Water": 5359,
+    "Blue Water": 1034,
+    "Grey Water": 3067
+  },
+  {
+    "Crop": "Cotton Fabric, Finished Textile",
+    "Water Footprint": 9982,
+    "Green Water": 5384,
+    "Blue Water": 1344,
+    "Grey Water": 3253
+  },
+  {
+    "Crop": "Linseed",
+    "Water Footprint": 5168,
+    "Green Water": 4730,
+    "Blue Water": 170,
+    "Grey Water": 268
+  },
+  {
+    "Crop": "Linseed Oil, Refined",
+    "Water Footprint": 9415,
+    "Green Water": 8618,
+    "Blue Water": 310,
+    "Grey Water": 488
+  },
+  {
+    "Crop": "Linseed Oil Cake",
+    "Water Footprint": 3077,
+    "Green Water": 2816,
+    "Blue Water": 101,
+    "Grey Water": 160
+  },
+  {
+    "Crop": "Hemp Seed",
+    "Water Footprint": 3685,
+    "Green Water": 3257,
+    "Blue Water": 417,
+    "Grey Water": 12
+  },
+  {
+    "Crop": "Cabbages and Other Brassicas",
+    "Water Footprint": 280,
+    "Green Water": 181,
+    "Blue Water": 73,
+    "Grey Water": 26
+  },
+  {
+    "Crop": "Artichokes",
+    "Water Footprint": 818,
+    "Green Water": 478,
+    "Blue Water": 98,
+    "Grey Water": 242
+  },
+  {
+    "Crop": "Asparagus",
+    "Water Footprint": 2150,
+    "Green Water": 1524,
+    "Blue Water": 507,
+    "Grey Water": 119
+  },
+  {
+    "Crop": "Lettuce",
+    "Water Footprint": 237,
+    "Green Water": 133,
+    "Blue Water": 77,
+    "Grey Water": 28
+  },
+  {
+    "Crop": "Spinach",
+    "Water Footprint": 292,
+    "Green Water": 118,
+    "Blue Water": 160,
+    "Grey Water": 14
+  },
+  {
+    "Crop": "Tomatoes",
+    "Water Footprint": 214,
+    "Green Water": 108,
+    "Blue Water": 43,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "Tomato Juice, Unfermented & Not Spirited",
+    "Water Footprint": 267,
+    "Green Water": 135,
+    "Blue Water": 53,
+    "Grey Water": 79
+  },
+  {
+    "Crop": "Tomato Juice, Concentrated",
+    "Water Footprint": 1069,
+    "Green Water": 539,
+    "Blue Water": 213,
+    "Grey Water": 316
+  },
+  {
+    "Crop": "Tomato Paste",
+    "Water Footprint": 855,
+    "Green Water": 431,
+    "Blue Water": 171,
+    "Grey Water": 253
+  },
+  {
+    "Crop": "Tomato Ketchup",
+    "Water Footprint": 534,
+    "Green Water": 270,
+    "Blue Water": 107,
+    "Grey Water": 158
+  },
+  {
+    "Crop": "Tomato Puree",
+    "Water Footprint": 713,
+    "Green Water": 360,
+    "Blue Water": 142,
+    "Grey Water": 211
+  },
+  {
+    "Crop": "Peeled Tomatoes",
+    "Water Footprint": 267,
+    "Green Water": 135,
+    "Blue Water": 53,
+    "Grey Water": 79
+  },
+  {
+    "Crop": "Tomato, Dried",
+    "Water Footprint": 4276,
+    "Green Water": 2157,
+    "Blue Water": 853,
+    "Grey Water": 1265
+  },
+  {
+    "Crop": "Cauliflowers and Broccoli",
+    "Water Footprint": 285,
+    "Green Water": 189,
+    "Blue Water": 75,
+    "Grey Water": 21
+  },
+  {
+    "Crop": "Brussels Sprouts",
+    "Water Footprint": 285,
+    "Green Water": 189,
+    "Blue Water": 75,
+    "Grey Water": 21
+  },
+  {
+    "Crop": "Pumpkins, Squash and Gourds",
+    "Water Footprint": 336,
+    "Green Water": 228,
+    "Blue Water": 84,
+    "Grey Water": 24
+  },
+  {
+    "Crop": "Cucumbers and Gherkins",
+    "Water Footprint": 353,
+    "Green Water": 206,
+    "Blue Water": 105,
+    "Grey Water": 42
+  },
+  {
+    "Crop": "Eggplants (Aubergines)",
+    "Water Footprint": 362,
+    "Green Water": 234,
+    "Blue Water": 95,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Chillies and Peppers, Green",
+    "Water Footprint": 379,
+    "Green Water": 240,
+    "Blue Water": 97,
+    "Grey Water": 42
+  },
+  {
+    "Crop": "Onions (Including Shallots), Green",
+    "Water Footprint": 272,
+    "Green Water": 176,
+    "Blue Water": 51,
+    "Grey Water": 44
+  },
+  {
+    "Crop": "Onions, Dry",
+    "Water Footprint": 345,
+    "Green Water": 192,
+    "Blue Water": 65,
+    "Grey Water": 88
+  },
+  {
+    "Crop": "Garlic",
+    "Water Footprint": 589,
+    "Green Water": 337,
+    "Blue Water": 170,
+    "Grey Water": 81
+  },
+  {
+    "Crop": "Garlic Powder",
+    "Water Footprint": 2265,
+    "Green Water": 1297,
+    "Blue Water": 655,
+    "Grey Water": 313
+  },
+  {
+    "Crop": "Beans, Green",
+    "Water Footprint": 561,
+    "Green Water": 320,
+    "Blue Water": 188,
+    "Grey Water": 54
+  },
+  {
+    "Crop": "Peas, Green",
+    "Water Footprint": 595,
+    "Green Water": 382,
+    "Blue Water": 150,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "String Beans",
+    "Water Footprint": 547,
+    "Green Water": 301,
+    "Blue Water": 143,
+    "Grey Water": 104
+  },
+  {
+    "Crop": "Carrots and Turnips",
+    "Water Footprint": 195,
+    "Green Water": 106,
+    "Blue Water": 61,
+    "Grey Water": 28
+  },
+  {
+    "Crop": "Okra",
+    "Water Footprint": 576,
+    "Green Water": 474,
+    "Blue Water": 65,
+    "Grey Water": 36
+  },
+  {
+    "Crop": "Maize, Green",
+    "Water Footprint": 700,
+    "Green Water": 455,
+    "Blue Water": 88,
+    "Grey Water": 157
+  },
+  {
+    "Crop": "Carobs",
+    "Water Footprint": 5594,
+    "Green Water": 4557,
+    "Blue Water": 703,
+    "Grey Water": 334
+  },
+  {
+    "Crop": "Bananas",
+    "Water Footprint": 790,
+    "Green Water": 660,
+    "Blue Water": 33,
+    "Grey Water": 97
+  },
+  {
+    "Crop": "Plantains",
+    "Water Footprint": 1602,
+    "Green Water": 1570,
+    "Blue Water": 6,
+    "Grey Water": 27
+  },
+  {
+    "Crop": "Oranges",
+    "Water Footprint": 560,
+    "Green Water": 401,
+    "Blue Water": 49,
+    "Grey Water": 110
+  },
+  {
+    "Crop": "Orange Juice",
+    "Water Footprint": 1018,
+    "Green Water": 729,
+    "Blue Water": 90,
+    "Grey Water": 199
+  },
+  {
+    "Crop": "Tangerines, Mandarins, Clement",
+    "Water Footprint": 748,
+    "Green Water": 479,
+    "Blue Water": 152,
+    "Grey Water": 118
+  },
+  {
+    "Crop": "Lemons and Limes",
+    "Water Footprint": 642,
+    "Green Water": 432,
+    "Blue Water": 58,
+    "Grey Water": 152
+  },
+  {
+    "Crop": "Grapefruit",
+    "Water Footprint": 506,
+    "Green Water": 367,
+    "Blue Water": 54,
+    "Grey Water": 85
+  },
+  {
+    "Crop": "Apples, Fresh",
+    "Water Footprint": 822,
+    "Green Water": 561,
+    "Blue Water": 127,
+    "Grey Water": 133
+  },
+  {
+    "Crop": "Apples, Dried",
+    "Water Footprint": 6847,
+    "Green Water": 4678,
+    "Blue Water": 1058,
+    "Grey Water": 1111
+  },
+  {
+    "Crop": "Apple Juice, Unfermented & Not Spirited",
+    "Water Footprint": 1141,
+    "Green Water": 780,
+    "Blue Water": 176,
+    "Grey Water": 185
+  },
+  {
+    "Crop": "Pears",
+    "Water Footprint": 922,
+    "Green Water": 645,
+    "Blue Water": 183,
+    "Grey Water": 94
+  },
+  {
+    "Crop": "Apricots",
+    "Water Footprint": 1287,
+    "Green Water": 694,
+    "Blue Water": 92,
+    "Grey Water": 502
+  },
+  {
+    "Crop": "Sour Cherries",
+    "Water Footprint": 1411,
+    "Green Water": 1098,
+    "Blue Water": 99,
+    "Grey Water": 213
+  },
+  {
+    "Crop": "Cherries",
+    "Water Footprint": 1604,
+    "Green Water": 961,
+    "Blue Water": 112,
+    "Grey Water": 531
+  },
+  {
+    "Crop": "Peaches and Nectarines",
+    "Water Footprint": 910,
+    "Green Water": 583,
+    "Blue Water": 139,
+    "Grey Water": 188
+  },
+  {
+    "Crop": "Plums and Sloes",
+    "Water Footprint": 2180,
+    "Green Water": 1570,
+    "Blue Water": 422,
+    "Grey Water": 188
+  },
+  {
+    "Crop": "Strawberries",
+    "Water Footprint": 347,
+    "Green Water": 201,
+    "Blue Water": 37,
+    "Grey Water": 109
+  },
+  {
+    "Crop": "Raspberries",
+    "Water Footprint": 413,
+    "Green Water": 293,
+    "Blue Water": 67,
+    "Grey Water": 53
+  },
+  {
+    "Crop": "Gooseberries",
+    "Water Footprint": 526,
+    "Green Water": 487,
+    "Blue Water": 31,
+    "Grey Water": 8
+  },
+  {
+    "Crop": "Currants",
+    "Water Footprint": 499,
+    "Green Water": 457,
+    "Blue Water": 23,
+    "Grey Water": 19
+  },
+  {
+    "Crop": "Blueberries",
+    "Water Footprint": 845,
+    "Green Water": 341,
+    "Blue Water": 170,
+    "Grey Water": 334
+  },
+  {
+    "Crop": "Cranberries",
+    "Water Footprint": 276,
+    "Green Water": 91,
+    "Blue Water": 77,
+    "Grey Water": 108
+  },
+  {
+    "Crop": "Grapes",
+    "Water Footprint": 608,
+    "Green Water": 425,
+    "Blue Water": 87,
+    "Grey Water": 97
+  },
+  {
+    "Crop": "Grapes, Dried",
+    "Water Footprint": 2433,
+    "Green Water": 1700,
+    "Blue Water": 347,
+    "Grey Water": 386
+  },
+  {
+    "Crop": "Grapefruit Juice",
+    "Water Footprint": 675,
+    "Green Water": 490,
+    "Blue Water": 71,
+    "Grey Water": 114
+  },
+  {
+    "Crop": "Grape Wines, Sparkling",
+    "Water Footprint": 869,
+    "Green Water": 607,
+    "Blue Water": 124,
+    "Grey Water": 138
+  },
+  {
+    "Crop": "Watermelons",
+    "Water Footprint": 235,
+    "Green Water": 147,
+    "Blue Water": 63,
+    "Grey Water": 25
+  },
+  {
+    "Crop": "Figs",
+    "Water Footprint": 3350,
+    "Green Water": 1527,
+    "Blue Water": 228,
+    "Grey Water": 1595
+  },
+  {
+    "Crop": "Mangoes, Mangosteens, Guavas",
+    "Water Footprint": 1800,
+    "Green Water": 1314,
+    "Blue Water": 124,
+    "Grey Water": 362
+  },
+  {
+    "Crop": "Avocados",
+    "Water Footprint": 1981,
+    "Green Water": 849,
+    "Blue Water": 849,
+    "Grey Water": 283
+  },
+  {
+    "Crop": "Pineapples",
+    "Water Footprint": 255,
+    "Green Water": 215,
+    "Blue Water": 31,
+    "Grey Water": 9
+  },
+  {
+    "Crop": "Pineapple Juice",
+    "Water Footprint": 1273,
+    "Green Water": 1075,
+    "Blue Water": 153,
+    "Grey Water": 45
+  },
+  {
+    "Crop": "Dates",
+    "Water Footprint": 2277,
+    "Green Water": 930,
+    "Blue Water": 98,
+    "Grey Water": 1250
+  },
+  {
+    "Crop": "Cashew Apple",
+    "Water Footprint": 3793,
+    "Green Water": 3638,
+    "Blue Water": 121,
+    "Grey Water": 34
+  },
+  {
+    "Crop": "Kiwifruit",
+    "Water Footprint": 514,
+    "Green Water": 307,
+    "Blue Water": 38,
+    "Grey Water": 168
+  },
+  {
+    "Crop": "Papayas",
+    "Water Footprint": 460,
+    "Green Water": 399,
+    "Blue Water": 21,
+    "Grey Water": 40
+  },
+  {
+    "Crop": "Coffee, Green",
+    "Water Footprint": 15897,
+    "Green Water": 15249,
+    "Blue Water": 532,
+    "Grey Water": 116
+  },
+  {
+    "Crop": "Coffee, Roasted",
+    "Water Footprint": 18925,
+    "Green Water": 18153,
+    "Blue Water": 633,
+    "Grey Water": 139
+  },
+  {
+    "Crop": "Cocoa Beans",
+    "Water Footprint": 19928,
+    "Green Water": 19745,
+    "Blue Water": 179,
+    "Grey Water": 4
+  },
+  {
+    "Crop": "Cocoa Paste",
+    "Water Footprint": 24238,
+    "Green Water": 24015,
+    "Blue Water": 218,
+    "Grey Water": 5
+  },
+  {
+    "Crop": "Cocoa Butter, Fat and Oil",
+    "Water Footprint": 33938,
+    "Green Water": 33626,
+    "Blue Water": 305,
+    "Grey Water": 7
+  },
+  {
+    "Crop": "Cocoa Powder",
+    "Water Footprint": 15636,
+    "Green Water": 15492,
+    "Blue Water": 141,
+    "Grey Water": 3
+  },
+  {
+    "Crop": "Chocolate",
+    "Water Footprint": 17196,
+    "Green Water": 16805,
+    "Blue Water": 193,
+    "Grey Water": 198
+  },
+  {
+    "Crop": "Green and Black Tea",
+    "Water Footprint": 8856,
+    "Green Water": 7232,
+    "Blue Water": 726,
+    "Grey Water": 898
+  },
+  {
+    "Crop": "Hop Cones",
+    "Water Footprint": 4065,
+    "Green Water": 2382,
+    "Blue Water": 1414,
+    "Grey Water": 269
+  },
+  {
+    "Crop": "Hop Extract",
+    "Water Footprint": 4065,
+    "Green Water": 2382,
+    "Blue Water": 1414,
+    "Grey Water": 269
+  },
+  {
+    "Crop": "Pepper of the Genus Piper",
+    "Water Footprint": 16259,
+    "Green Water": 9528,
+    "Blue Water": 5654,
+    "Grey Water": 1077
+  },
+  {
+    "Crop": "Chillies and Peppers, Dry",
+    "Water Footprint": 7611,
+    "Green Water": 6540,
+    "Blue Water": 604,
+    "Grey Water": 467
+  },
+  {
+    "Crop": "Vanilla Beans",
+    "Water Footprint": 7365,
+    "Green Water": 5869,
+    "Blue Water": 371,
+    "Grey Water": 1125
+  },
+  {
+    "Crop": "Cinnamon (Canella)",
+    "Water Footprint": 126505,
+    "Green Water": 86392,
+    "Blue Water": 1065,
+    "Grey Water": 39048
+  },
+  {
+    "Crop": "Cloves",
+    "Water Footprint": 15526,
+    "Green Water": 14853,
+    "Blue Water": 632,
+    "Grey Water": 41
+  },
+  {
+    "Crop": "Nutmeg, Mace and Cardamoms",
+    "Water Footprint": 61205,
+    "Green Water": 59834,
+    "Blue Water": 1341,
+    "Grey Water": 30
+  },
+  {
+    "Crop": "Anise, Badian, Fennel, Coriander",
+    "Water Footprint": 34319,
+    "Green Water": 30683,
+    "Blue Water": 1014,
+    "Grey Water": 2623
+  },
+  {
+    "Crop": "Coriander Seeds",
+    "Water Footprint": 8280,
+    "Green Water": 5369,
+    "Blue Water": 1046,
+    "Grey Water": 1865
+  },
+  {
+    "Crop": "Ginger",
+    "Water Footprint": 8280,
+    "Green Water": 5369,
+    "Blue Water": 1046,
+    "Grey Water": 1865
+  },
+  {
+    "Crop": "Peppermint",
+    "Water Footprint": 1657,
+    "Green Water": 1525,
+    "Blue Water": 92,
+    "Grey Water": 40
+  },
+  {
+    "Crop": "Flax Fibre and Tow",
+    "Water Footprint": 288,
+    "Green Water": 206,
+    "Blue Water": 19,
+    "Grey Water": 63
+  },
+  {
+    "Crop": "Flax Fibre, Otherwise Processed but Not Spun",
+    "Water Footprint": 3481,
+    "Green Water": 2637,
+    "Blue Water": 401,
+    "Grey Water": 443
+  },
+  {
+    "Crop": "Flax Tow and Waste",
+    "Water Footprint": 3783,
+    "Green Water": 2866,
+    "Blue Water": 436,
+    "Grey Water": 481
+  },
+  {
+    "Crop": "Hemp Fibre and Tow",
+    "Water Footprint": 767,
+    "Green Water": 581,
+    "Blue Water": 88,
+    "Grey Water": 98
+  },
+  {
+    "Crop": "True Hemp Fibre, Processed but Not Spun",
+    "Water Footprint": 2447,
+    "Green Water": 1824,
+    "Blue Water": 624,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Jute and Other Textile Bast Fibres",
+    "Water Footprint": 2719,
+    "Green Water": 2026,
+    "Blue Water": 693,
+    "Grey Water": 0
+  },
+  {
+    "Crop": "Ramie",
+    "Water Footprint": 2605,
+    "Green Water": 2356,
+    "Blue Water": 217,
+    "Grey Water": 33
+  },
+  {
+    "Crop": "Sisal",
+    "Water Footprint": 4507,
+    "Green Water": 3712,
+    "Blue Water": 595,
+    "Grey Water": 201
+  },
+  {
+    "Crop": "Sisal Textile Fibres, Processed but Not Spun",
+    "Water Footprint": 7041,
+    "Green Water": 6112,
+    "Blue Water": 222,
+    "Grey Water": 708
+  },
+  {
+    "Crop": "Agave Fibres",
+    "Water Footprint": 7824,
+    "Green Water": 6791,
+    "Blue Water": 246,
+    "Grey Water": 787
+  },
+  {
+    "Crop": "Manila Fibre (Abaca)",
+    "Water Footprint": 6549,
+    "Green Water": 6434,
+    "Blue Water": 106,
+    "Grey Water": 9
+  },
+  {
+    "Crop": "Abaca Fibre, Processed but Not Spun",
+    "Water Footprint": 20388,
+    "Green Water": 19376,
+    "Blue Water": 766,
+    "Grey Water": 246
+  },
+  {
+    "Crop": "Tobacco, Unmanufactured",
+    "Water Footprint": 22654,
+    "Green Water": 21529,
+    "Blue Water": 851,
+    "Grey Water": 273
+  },
+  {
+    "Crop": "Natural Rubber",
+    "Water Footprint": 2925,
+    "Green Water": 2021,
+    "Blue Water": 700,
+    "Grey Water": 205
+  }
+];
+
+        const cropSearchBar = document.getElementById('cropSearchBar');
+        const searchResults = document.getElementById('searchResults');
+        const cropInfoDiv = document.getElementById('cropInfo');
+
+        // Search for crops in the data
+        cropSearchBar.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            searchResults.innerHTML = ''; // Clear previous results
+
+            if (query) {
+                const filteredCrops = cropData.filter(crop => crop.Crop.toLowerCase().includes(query));
+                filteredCrops.forEach(crop => {
+                    const li = document.createElement('li');
+                    li.textContent = crop.Crop;
+                    li.addEventListener('click', function() {
+                        displayCropInfo(crop.Crop);
+                        cropSearchBar.value = '';  // Clear search bar
+                        searchResults.innerHTML = '';  // Clear the list
+                    });
+                    searchResults.appendChild(li);
+                });
+            }
+        });
+
+        function displayCropInfo(cropName) {
+            const selectedCrop = cropData.find(crop => crop.Crop === cropName);
+
+            if (selectedCrop) {
+                cropInfoDiv.innerHTML = `<h3>${cropName}</h3>
+                                         <p>Total Water Footprint: ${selectedCrop['Water Footprint']} L</p>`;
+                createPieChart(selectedCrop);
+            }
+        }
+
+        function createPieChart(data) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            const values = [data['Green Water'], data['Blue Water'], data['Grey Water']];
+            const labels = ['Green Water', 'Blue Water', 'Grey Water'];
+
+            if (window.myPieChart) {
+                window.myPieChart.destroy();
+            }
+
+            window.myPieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Water Footprint',
+                        data: values,
+                        backgroundColor: ['#4CAF50', '#2196F3', '#9E9E9E'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        animateScale: true
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
